@@ -1,0 +1,7 @@
+upstream/
+ALLMYSCREENS/build/
+ALLMYSCREENS/DerivedData/
+build/
+*.xcuserstate
+**/xcuserdata/
+.DS_Store

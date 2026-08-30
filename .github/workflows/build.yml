@@ -1,0 +1,47 @@
+name: Build ALLMYSCREENS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Release
+        run: |
+          xcodebuild \
+            -project ALLMYSCREENS/MacsyZones.xcodeproj \
+            -scheme ALLMYSCREENS \
+            -configuration Release \
+            -derivedDataPath build \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM= \
+            CODE_SIGN_IDENTITY=-
+
+      - name: Ad-hoc sign
+        run: codesign --force --deep --sign - build/Build/Products/Release/ALLMYSCREENS.app
+
+      - name: Zip app
+        run: |
+          cd build/Build/Products/Release
+          ditto -c -k --sequesterRsrc --keepParent ALLMYSCREENS.app ALLMYSCREENS.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ALLMYSCREENS-macOS
+          path: build/Build/Products/Release/ALLMYSCREENS.zip
+          retention-days: 30
+
+      - name: Upload to Release (on main push)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v0.1.0 2>/dev/null || \
+            gh release create v0.1.0 --title "ALLMYSCREENS v0.1.0" --notes "Portrait monitor zone manager. Download ALLMYSCREENS.zip, unzip, drag to Applications."
+          gh release upload v0.1.0 build/Build/Products/Release/ALLMYSCREENS.zip --clobber
